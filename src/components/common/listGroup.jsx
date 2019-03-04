@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 
 const ListGroup = props => {
   const {
@@ -27,7 +27,7 @@ const ListGroup = props => {
 
 ListGroup.defaultProps = {
   textProperty: "name",
-  valueProperty: "_id"
+  valueProperty: "id"
 };
 
-export default ListGroup;
+export default React.memo(ListGroup);

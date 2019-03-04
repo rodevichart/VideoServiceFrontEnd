@@ -4,10 +4,10 @@ import Table from "./common/table";
 
 class MoviesTable extends Component {
   columns = [
-    { path: "title", lable: "Title" },
+    { path: "name", lable: "Title" },
     { path: "genre.name", lable: "Genre" },
     { path: "numberInStock", lable: "Stock" },
-    { path: "dailyRentalRate", lable: "Rate" },
+    { path: "rate", lable: "Rate" },
     {
       key: "like",
       content: movie => (
@@ -20,7 +20,7 @@ class MoviesTable extends Component {
         <button
           onClick={() =>
             //TODO from _id to id
-            this.props.onDelete(movie._id)
+            this.props.onDelete(movie.id)
           }
           className="btn btn-sm btn-danger"
         >

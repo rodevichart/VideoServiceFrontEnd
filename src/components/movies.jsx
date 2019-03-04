@@ -1,11 +1,11 @@
 import React, { Component, Fragment } from "react";
-// import http from "../services/httpService";
-import { getMovies } from "../services/fakeMovieService";
+import http from "../services/httpService";
+// import { getMovies } from "../services/fakeMovieService";
 import Pagination from "./common/pagination";
 import ListGroup from "./common/listGroup";
 import MoviesTable from "./moviesTable";
 import { paginate } from "../utils/paginate";
-import { getGenres } from "../services/fakeGenreService";
+// import { getGenres } from "../services/fakeGenreService";
 import _ from "lodash";
 
 class Movies extends Component {
@@ -14,24 +14,28 @@ class Movies extends Component {
     geners: [],
     currentPage: 1,
     pageSize: 4,
-    sortColumn: { path: "title", order: "asc" }
+    sortColumn: { path: "name", order: "asc" }
   };
-  // async componentDidMount() {
-  //   const response = await http.get("/api/movies");
-  //   console.log(response);
-  //   const { data: movies } = response;
-  //   this.setState({ movies });
-  // }
-
-  componentDidMount() {
-    const geners = [{ _id: "", name: "All Genres" }, ...getGenres()];
-    this.setState({ movies: getMovies(), geners });
+  async componentDidMount() {
+    const moviesResponse = await http.get("http://localhost/api/movies");
+    const { data: movies } = moviesResponse;
+    const genreResponse = await http.get("http://localhost/api/genres");
+    let { data: geners } = genreResponse;
+    geners = [{ id: "", name: "All Genres" }, ...geners];
+    this.setState({ movies, geners });
   }
+
+  // componentDidMount() {
+  //   const response = http.get("http://localhost/api/movies");
+  //   console.log(response);
+  //   const geners = [{ _id: "", name: "All Genres" }, ...getGenres()];
+  //   this.setState({ movies: getMovies(), geners });
+  // }
 
   handleDelete = movieId => {
     // deleteMovie(movieId);
     //TODO from _id to id
-    const movies = this.state.movies.filter(movie => movie._id !== movieId);
+    const movies = this.state.movies.filter(movie => movie.id !== movieId);
     this.setState({ movies });
   };
 
@@ -48,6 +52,7 @@ class Movies extends Component {
   };
 
   handleFilterItemChange = filterItem => {
+    console.log(filterItem);
     this.setState({ selectedGenre: filterItem, currentPage: 1 });
   };
 
@@ -65,8 +70,8 @@ class Movies extends Component {
     } = this.state;
 
     const filtered =
-      selectedGenre && selectedGenre._id
-        ? allMovies.filter(m => m.genre._id === selectedGenre._id)
+      selectedGenre && selectedGenre.id
+        ? allMovies.filter(movie => movie.genre.id === selectedGenre.id)
         : allMovies;
 
     const sorted = _.orderBy(filtered, [sortColumn.path], [sortColumn.order]);
