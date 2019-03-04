@@ -1,11 +1,11 @@
 import React, { Component, Fragment } from "react";
 import http from "../services/httpService";
-// import { getMovies } from "../services/fakeMovieService";
+import { getMovies } from "../services/fakeMovieService";
 import Pagination from "./common/pagination";
 import ListGroup from "./common/listGroup";
 import MoviesTable from "./moviesTable";
 import { paginate } from "../utils/paginate";
-// import { getGenres } from "../services/fakeGenreService";
+import { getGenres } from "../services/fakeGenreService";
 import _ from "lodash";
 
 class Movies extends Component {
@@ -16,21 +16,19 @@ class Movies extends Component {
     pageSize: 4,
     sortColumn: { path: "name", order: "asc" }
   };
-  async componentDidMount() {
-    const moviesResponse = await http.get("http://localhost/api/movies");
-    const { data: movies } = moviesResponse;
-    const genreResponse = await http.get("http://localhost/api/genres");
-    let { data: geners } = genreResponse;
-    geners = [{ id: "", name: "All Genres" }, ...geners];
-    this.setState({ movies, geners });
-  }
-
-  // componentDidMount() {
-  //   const response = http.get("http://localhost/api/movies");
-  //   console.log(response);
-  //   const geners = [{ _id: "", name: "All Genres" }, ...getGenres()];
-  //   this.setState({ movies: getMovies(), geners });
+  // async componentDidMount() {
+  //   const moviesResponse = await http.get("http://localhost/api/movies");
+  //   const { data: movies } = moviesResponse;
+  //   const genreResponse = await http.get("http://localhost/api/genres");
+  //   let { data: geners } = genreResponse;
+  //   geners = [{ id: "", name: "All Genres" }, ...geners];
+  //   this.setState({ movies, geners });
   // }
+
+  componentDidMount() {
+    const geners = [{ _id: "", name: "All Genres" }, ...getGenres()];
+    this.setState({ movies: getMovies(), geners });
+  }
 
   handleDelete = movieId => {
     // deleteMovie(movieId);
