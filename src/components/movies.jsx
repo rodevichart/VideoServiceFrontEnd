@@ -51,7 +51,6 @@ class Movies extends Component {
   };
 
   handleFilterItemChange = filterItem => {
-    console.log(filterItem);
     this.setState({ selectedGenre: filterItem, currentPage: 1 });
   };
 
