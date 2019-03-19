@@ -1,8 +1,10 @@
 import React from "react";
 import Form from "./common/form";
 import Joi from "joi-browser";
-import { getGenres } from "../services/fakeGenreService";
-import { saveMovie, getMovie } from "../services/fakeMovieService";
+// import { getGenres } from "../services/fakeGenreService";
+// import { saveMovie, getMovie } from "../services/fakeMovieService";
+import { getMovieById, saveMovie } from "../services/movieService";
+import { getGenres } from "../services/genreService";
 
 class MovieForm extends Form {
   state = {
@@ -17,21 +19,32 @@ class MovieForm extends Form {
     errors: {}
   };
 
-  componentDidMount() {
-    const movieId = this.props.match.params.id;
-
-    if (movieId !== "new") {
-      const movie = getMovie(movieId);
-      if (!movie) return this.props.history.replace("/not-found");
-      const mapedMovie = this.mapToViewMode(movie);
-
-      this.setState({ data: mapedMovie });
-    } else {
-      this.setState({ data: {} });
-    }
-    // const geners = [{ _id: "", name: "" }, ...getGenres()];
-    const geners = getGenres();
+  async populateGenres() {
+    const genreResponse = await getGenres();
+    const { data: geners } = genreResponse;
     this.setState({ geners });
+  }
+
+  async populateMovies(movieId) {
+    try {
+      if (movieId === "new") {
+        this.setState({ data: {} });
+        return;
+      }
+
+      const { data: movie } = await getMovieById(movieId);
+      const mapedMovie = this.mapToViewMode(movie);
+      this.setState({ data: mapedMovie });
+    } catch (ex) {
+      if (ex.response && ex.response.status === 404)
+        this.props.history.replace("/not-found");
+    }
+  }
+
+  async componentDidMount() {
+    const movieId = this.props.match.params.id;
+    await this.populateMovies(movieId);
+    await this.populateGenres();
   }
 
   mapToViewMode(movie) {
@@ -45,11 +58,11 @@ class MovieForm extends Form {
   }
 
   schema = {
-    id: Joi.string(),
+    id: Joi.number(),
     name: Joi.string()
       .required()
       .label("Title"),
-    genreId: Joi.string()
+    genreId: Joi.number()
       .required()
       .label("Genre"),
     numberInStock: Joi.number()
@@ -64,10 +77,13 @@ class MovieForm extends Form {
       .label("Daily Rental Rate")
   };
 
-  doSubmit = () => {
+  doSubmit = async () => {
     //call the server
     const movie = this.state.data;
-    saveMovie(movie);
+    // saveMovie(movie);
+    const savedMovie = await saveMovie(movie);
+    console.log(savedMovie);
+
     this.props.history.push("/movies");
   };
 

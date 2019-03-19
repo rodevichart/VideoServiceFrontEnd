@@ -1,0 +1,5 @@
+{
+  "movieApiEndPoint": "http://localhost.viderent/api/movies",
+  "genreApiEndPoint": "http://localhost.viderent/api/genres",
+  "userApiEndPoint": "http://localhost.viderent/api/users"
+}

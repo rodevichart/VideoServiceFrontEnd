@@ -1,12 +1,14 @@
 import React, { Component } from "react";
-import http from "../services/httpService";
-import { getMovies } from "../services/fakeMovieService";
+import { getMovies, removeMovie } from "../services/movieService";
+import { getGenres } from "../services/genreService";
+// import { getMovies } from "../services/fakeMovieService";
 import Pagination from "./common/pagination";
 import ListGroup from "./common/listGroup";
 import SearchBox from "./common/searchBox";
 import MoviesTable from "./moviesTable";
 import { paginate } from "../utils/paginate";
-import { getGenres } from "../services/fakeGenreService";
+import { toast } from "react-toastify";
+// import { getGenres } from "../services/fakeGenreService";
 import { NavLink } from "react-router-dom";
 import _ from "lodash";
 
@@ -18,27 +20,62 @@ class Movies extends Component {
     selectedGenre: null,
     currentPage: 1,
     pageSize: 4,
+    totalRecords: 0,
     sortColumn: { path: "name", order: "asc" }
   };
-  // async componentDidMount() {
-  //   const moviesResponse = await http.get("http://localhost/api/movies");
-  //   const { data: movies } = moviesResponse;
-  //   const genreResponse = await http.get("http://localhost/api/genres");
-  //   let { data: geners } = genreResponse;
-  //   geners = [{ id: "", name: "All Genres" }, ...geners];
-  //   this.setState({ movies, geners });
-  // }
 
-  componentDidMount() {
-    const geners = [{ _id: "", name: "All Genres" }, ...getGenres()];
-    this.setState({ movies: getMovies(), geners });
+  isSortingDirectionAscending(sortDirection) {
+    return sortDirection === "asc";
   }
 
-  handleDelete = movieId => {
-    // deleteMovie(movieId);
-    //TODO from _id to id
+  async fetchMovie() {
+    const {
+      selectedGenre,
+      searchQuery: search,
+      sortColumn,
+      currentPage: pageIndex,
+      pageSize
+    } = this.state;
+    var genreId = selectedGenre === null ? null : selectedGenre.id;
+    var orderColumn = sortColumn.path;
+    var isSortAscending = this.isSortingDirectionAscending(sortColumn.order);
+    const {
+      data: { items, totalItems }
+    } = await getMovies({
+      search,
+      orderColumn,
+      isSortAscending,
+      pageIndex,
+      pageSize,
+      genreId
+    });
+    this.setState({ movies: items, totalRecords: totalItems });
+  }
+
+  async componentDidMount() {
+    await this.fetchMovie();
+    const { data } = await getGenres();
+    const geners = [{ id: "", name: "All Genres" }, ...data];
+    this.setState({ geners });
+  }
+
+  handleDelete = async movieId => {
+    const originalMovies = this.state.movies;
+
     const movies = this.state.movies.filter(movie => movie.id !== movieId);
     this.setState({ movies });
+
+    try {
+      await removeMovie(movieId);
+    } catch (ex) {
+      if (ex.response && ex.response.status === 400) toast("Bad Movie Id!");
+      else if (ex.response.status === 403) {
+        toast("Forbidden");
+      } else {
+        toast("Something failed while deleting a movie!");
+      }
+      this.setState({ movies: originalMovies });
+    }
   };
 
   handleLike = movie => {
@@ -49,61 +86,39 @@ class Movies extends Component {
     this.setState({ movies });
   };
 
-  handlePageChange = page => {
-    this.setState({ currentPage: page });
+  handlePageChange = async page => {
+    await this.setState({ currentPage: page });
+    await this.fetchMovie();
   };
 
-  handleFilterItemChange = filterItem => {
-    this.setState({
-      selectedGenre: filterItem,
-      searchQuery: "",
-      currentPage: 1
-    });
+  handleFilterItemChange = async filterItem => {
+    await this.setState({ selectedGenre: filterItem, currentPage: 1 });
+    await this.fetchMovie();
   };
 
-  handleSort = sortColumn => {
-    this.setState({ sortColumn });
+  handleSort = async sortColumn => {
+    await this.setState({ sortColumn: sortColumn, currentPage: 1 });
+    await this.fetchMovie();
   };
 
-  handleSearch = query => {
-    this.setState({ searchQuery: query, selectedGenre: null, currentPage: 1 });
-  };
-
-  getPageData = () => {
-    const {
-      pageSize,
-      currentPage,
-      selectedGenre,
-      searchQuery,
-      sortColumn,
-      movies: allMovies
-    } = this.state;
-
-    console.log(searchQuery);
-
-    let filtered = allMovies;
-
-    if (searchQuery)
-      filtered = allMovies.filter(movie =>
-        movie.name.toLowerCase().startsWith(searchQuery.toLowerCase())
-      );
-    else if (selectedGenre && selectedGenre.id)
-      allMovies.filter(movie => movie.genre.id === selectedGenre.id);
-
-    const sorted = _.orderBy(filtered, [sortColumn.path], [sortColumn.order]);
-
-    const movies = paginate(sorted, currentPage, pageSize);
-
-    return { totalCount: filtered.length, data: movies };
+  handleSearch = async query => {
+    await this.setState({ searchQuery: query, currentPage: 1 });
+    await this.fetchMovie();
   };
 
   render() {
-    const { length: count } = this.state.movies;
-    const { pageSize, currentPage, geners, sortColumn } = this.state;
+    const {
+      pageSize,
+      currentPage,
+      geners,
+      sortColumn,
+      totalRecords: count
+    } = this.state;
+    const { user } = this.props;
+    // const role = user.role;
+
     if (count === 0) return <p>There are no movies in the database</p>;
-
-    const { totalCount, searchQuery, data: movies } = this.getPageData();
-
+    const { searchQuery, movies } = this.state;
     return (
       <div className="row">
         <div className="col-2">
@@ -114,10 +129,12 @@ class Movies extends Component {
           />
         </div>
         <div className="col">
-          <NavLink to="/movies/new" className="btn btn-primary">
-            New Movie
-          </NavLink>
-          <p>Showing {totalCount} movies in the database.</p>
+          {user && user.role === "Admin" && (
+            <NavLink to="/movies/new" className="btn btn-primary">
+              New Movie
+            </NavLink>
+          )}
+          <p>Showing {this.state.totalRecords} movies in the database.</p>
           <SearchBox value={searchQuery} onChange={this.handleSearch} />
           <MoviesTable
             movies={movies}
@@ -127,7 +144,7 @@ class Movies extends Component {
             onDelete={this.handleDelete}
           />
           <Pagination
-            itemsCount={totalCount}
+            itemsCount={this.state.totalRecords}
             pageSize={pageSize}
             currentPage={currentPage}
             onPageChange={this.handlePageChange}
