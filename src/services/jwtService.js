@@ -4,7 +4,6 @@ export const tokenKey = "token";
 
 export function getJwt() {
   const item = localStorage.getItem(tokenKey);
-  console.log(item);
   return item;
 }
 
